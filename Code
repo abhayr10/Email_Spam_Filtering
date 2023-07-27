@@ -1,0 +1,93 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score, confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
+from wordcloud import WordCloud
+
+# Load the dataset (assuming it has two columns: 'v1' for email messages and 'v2' for target where 0 represents ham and 1 represents spam)
+data = pd.read_csv('C:\Program Files\spam.csv')
+
+# Exploration of the Data
+print("Data Info:")
+print(data.info())
+print("\nData Description:")
+print(data.describe())
+print("\nTarget Distribution:")
+print(data['v2'].value_counts())
+
+# Visualizing target distribution
+plt.figure(figsize=(6, 6))
+sns.countplot(x=data['v2'])
+plt.title('Target Distribution (Spam vs. Ham)')
+plt.xlabel('Target')
+plt.ylabel('Count')
+plt.xticks(ticks=[0, 1], labels=['ham', 'spam'])
+plt.show()
+
+# Spliting the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(data['v1'], data['v2'], test_size=0.2, random_state=42)
+
+# Feature extraction using CountVectorizer
+vectorizer = CountVectorizer()
+X_train_vectorized = vectorizer.fit_transform(X_train)
+X_test_vectorized = vectorizer.transform(X_test)
+
+# Train the Naive Bayes classifier
+classifier = MultinomialNB()
+classifier.fit(X_train_vectorized, y_train)
+
+# Predict on the test set
+y_pred = classifier.predict(X_test_vectorized)
+
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+conf_matrix = confusion_matrix(y_test, y_pred)
+
+print(f"\nAccuracy: {accuracy}")
+print("Confusion Matrix:")
+print(conf_matrix)
+
+# Filter ham and spam messages
+ham_messages = data[data['v2'] == 'ham']['v1']
+spam_messages = data[data['v2'] == 'spam']['v1']
+
+# Check if the DataFrames are empty
+if not ham_messages.empty and not spam_messages.empty:
+    # Visualize word frequency for ham and spam messages
+    ham_word_freq = pd.Series(' '.join(ham_messages).split()).value_counts()
+    spam_word_freq = pd.Series(' '.join(spam_messages).split()).value_counts()
+
+    plt.figure(figsize=(10, 6))
+    plt.subplot(1, 2, 1)
+    ham_word_freq[:20].plot(kind='bar', color='green')
+    plt.title('Top 20 Words in Ham Messages')
+    plt.xlabel('Words')
+    plt.ylabel('Frequency')
+    plt.subplot(1, 2, 2)
+    spam_word_freq[:20].plot(kind='bar', color='red')
+    plt.title('Top 20 Words in Spam Messages')
+    plt.xlabel('Words')
+    plt.ylabel('Frequency')
+    plt.tight_layout()
+    plt.show()
+
+    # Generate word cloud for ham and spam messages
+    wordcloud_ham = WordCloud(width=800, height=400, background_color='white').generate(' '.join(ham_messages))
+    wordcloud_spam = WordCloud(width=800, height=400, background_color='white').generate(' '.join(spam_messages))
+
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.imshow(wordcloud_ham, interpolation='bilinear')
+    plt.title('Word Cloud for Ham Messages')
+    plt.axis('off')
+    plt.subplot(1, 2, 2)
+    plt.imshow(wordcloud_spam, interpolation='bilinear', cmap='Reds')
+    plt.title('Word Cloud for Spam Messages')
+    plt.axis('off')
+    plt.tight_layout()
+    plt.show()
+else:
+    print("No ham or spam messages found.")
